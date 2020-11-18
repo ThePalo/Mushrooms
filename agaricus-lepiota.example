@@ -1,7 +1,7 @@
-p,c,b,b
-e,c,y,b
-e,b,w,b
-p,c,w,b
-e,c,y,b
-e,b,w,b
-p,c,w,p
+p,x,n,k
+e,x,y,k
+e,b,w,n
+p,x,w,n
+e,x,y,n
+e,b,w,n
+p,x,w,p
