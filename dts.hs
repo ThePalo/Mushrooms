@@ -1,8 +1,26 @@
-data Argal a = Argal a [Argal a]        -- (no hi ha arbre buit en els arbres generals)
+data Argal a = Argal a [Argal a]
+
+data DtsNode = Node String String 
     deriving (Show)
 
-type Dts = Argal (Int, Int)        
+type Dts = Argal DtsNode
 
+offsetIndent:: Int -> String
+offsetIndent x 
+    | x > 0 = "\t" ++ (offsetIndent (x-1))
+    | otherwise = ""
+
+showIndent:: Dts -> Int -> String
+showIndent (Argal (Node attVal attName) []) indent =
+    (offsetIndent indent) ++ attVal ++ "\n" ++ 
+    offsetIndent (indent+1) ++ attName ++ "\n" 
+showIndent (Argal (Node attVal attName) children) indent =
+    (offsetIndent indent) ++ attVal ++ "\n" ++ 
+    offsetIndent (indent+1) ++ attName ++ "\n" ++ 
+    (concatMap (\x -> showIndent x (indent+2)) children)
+
+showDts:: Dts -> String
+showDts dts = showIndent dts 0
 
 ------------ FASE DE CONSTURCCIÓ DEL DTS ------------
 
@@ -39,8 +57,8 @@ type Taf = (Char,(Int, Int))
 -- [NomAtt1, NomAtt2, ... NomAtt_n] Per tant, la id del atribut x és (x-1)
 -- Aquesta id és mantè per a tota la lògica del programa. Per exemple, la matriu de Taf, la fila
 -- 0 fa referència a la llista de Taf de l'atribut 1, i així seqüencialment
-tradAtt:: [String]
-tradAtt = ["cap-shape", "cap-color", "gill-color"]
+tradAttf:: [String]
+tradAttf = ["cap-shape", "cap-color", "gill-color"]
 
 -- Per a la tradució de valors d'atribut al seu nom complet, s'utilitza una matriu [[(Char, String)]]
 -- on char es la id (que surt en els exemples, i String el nom complet)
@@ -51,9 +69,15 @@ tradAttVal = [[('b',"bell"),('x',"convex")],
 
 takeIdAttVal:: [(Char,String)] -> Char -> Int
 takeIdAttVal [] _ = 0
-takeIdAttVal ((id,name):xs) att
+takeIdAttVal ((id,_):xs) att
     | att == id = 0
     | otherwise = 1 + takeIdAttVal xs att
+
+takeNameAttVal:: [(Char,String)] -> Char -> String
+takeNameAttVal [] _ = ""
+takeNameAttVal ((id,name):xs) att
+    | att == id = name
+    | otherwise = takeNameAttVal xs att
 
 
 ---- Comput de la llista Taf de tots els atributs ----
@@ -75,18 +99,21 @@ modifyFreq ((att,(pFreq, eFreq)):xs) attVal classVal =
 computeAttributeAux:: [String] -> Int -> [Taf] -> [Taf]
 computeAttributeAux [] _ tafList = tafList
 computeAttributeAux (ex:exs) att tafList =
-    let attVal = ex !! att
+    let posatt = att + 1
+        attVal = ex !! posatt
         classVal = ex !! 0
     in
         computeAttributeAux exs att (modifyFreq tafList attVal classVal)
 
 -- Computa la llista taf d'un atribut
-computeAttribute:: [String] -> Int -> [Taf]
-computeAttribute set att = computeAttributeAux set att []
+computeAttribute:: [String] -> Int -> [Int] -> [Taf]
+computeAttribute set att updated
+    | elem att updated = []
+    | otherwise = computeAttributeAux set att []
 
 -- Computa les llistes taf de tots els atributs
 computeAllAttributes:: [String] -> [Int] -> [[Taf]]
-computeAllAttributes set updated = map (\x -> computeAttribute set x) (filter (\x -> not $ elem x updated)[1..((length $ set !! 0)-1)])
+computeAllAttributes set updated = map (\x -> computeAttribute set x updated) [0..((length $ set !! 0)-2)]
 
 
 ---- Calcul dels valors dels atributs a partir de les seves llistes Taf ----
@@ -201,13 +228,55 @@ updateUsedAtt att upAtt = upAtt ++ [att]
 --    let childs = listFromTaf taf
 --    Argal att []
 
--- Donat una llista taf d'un atribut i la traducció unica dels valors, retorna un identificador de cada
--- valor d'atribut
-listFromTaf:: [Taf] -> [(Char, String)] -> [Int]
+-- Donat una llista taf d'un atribut i la traducció unica dels valors, retorna la
+-- llista dels valors amb el seu nom complet
+listFromTaf:: [Taf] -> [(Char, String)] -> [String]
 listFromTaf [] _ = []
-listFromTaf ((att,_):xs) trad = ((takeIdAttVal trad att):(listFromTaf xs trad))
+listFromTaf ((att,_):xs) trad = ((takeNameAttVal trad att):(listFromTaf xs trad))
 
---buildDts:: [String] -> Dts
+-- Donat un Taf, mira si es fulla (1 si p, 2 si e) o no (0 si node)
+isLeaf:: Taf -> Int
+isLeaf (_,(_,0)) = 1
+isLeaf (_,(0,_)) = 2
+isLeaf (_,(_,_)) = 0
+
+-- A partir de la llista taf, extreiem els valors de l'atribut que crein fulles
+-- i els que crein nodes
+nodeOrLeafAttVal:: [Taf] -> [Int]
+nodeOrLeafAttVal tafList = map isLeaf tafList
+
+buildDts:: [String] -> [String] -> Dts
+buildDts set tradAtt = 
+    let tradVal = tradAttVal
+        --tradAtt = tradAtt
+        tcafreq = computeAllAttributes set []
+        maxims = calculateAllAttValue tcafreq (length set)
+        posmax = takeBestAtt maxims tcafreq
+        newset = modifySet posmax tcafreq set
+        updated = updateUsedAtt posmax []
+        attName = (tradAtt !! posmax)
+        valNames = listFromTaf (tcafreq !! posmax) (tradVal !! posmax)
+        valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
+        list = zip valNames valNorL
+    in (Argal (Node "init" attName) (map (\x-> recursiveBuildDts x newset updated tradAtt) list))
+
+
+recursiveBuildDts:: (String, Int) -> [String] -> [Int] -> [String] -> Dts
+recursiveBuildDts (valName, 1) _ _ _ = (Argal (Node valName "poisonous") [])
+recursiveBuildDts (valName, 2) _ _ _ = (Argal (Node valName "edible") [])
+recursiveBuildDts (valName, _) set updated tradAtt = 
+    let tradVal = tradAttVal
+        tcafreq = computeAllAttributes set updated
+        maxims = calculateAllAttValue tcafreq (length set)
+        posmax = takeBestAtt maxims tcafreq
+        newset = modifySet posmax tcafreq set
+        newUpdated = updateUsedAtt posmax updated
+        attName = (tradAtt !! posmax)
+        valNames = listFromTaf (tcafreq !! posmax) (tradVal !! posmax)
+        valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
+        list = zip valNames valNorL
+    in (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated tradAtt) list))
+
 
 
 
@@ -219,26 +288,11 @@ main = do
     -- Take dataset
     contents <- readFile "agaricus-lepiota.example"
     let examples = lines contents
-    
-    -- Build decision tree
-    --let dts = buildDts examples
-    let tradVal = tradAttVal
     let set = processExamples examples
-    let tcafreq = computeAllAttributes set []
-    let maxims = calculateAllAttValue tcafreq (length set)
-    let posmax = takeBestAtt maxims tcafreq
-    let newset = modifySet posmax tcafreq set
-    let updated = updateUsedAtt posmax []
-    let fills = listFromTaf (tcafreq !! posmax) (tradVal !! posmax)
-    
-    putStrLn $ show set
-    putStrLn $ show $ tcafreq !! 0
-    putStrLn $ show $ tcafreq !! 1
-    putStrLn $ show $ tcafreq !! 2
-    putStrLn $ show maxims
-    putStrLn $ show posmax
-    putStrLn $ show newset
-    putStrLn $ show updated
-    putStrLn $ show fills
+
+    -- Build decision tree
+    let dts = buildDts set ["cap-shape", "cap-color", "gill-color"]
+
+    putStrLn $ (showDts dts)
 
     return ()
