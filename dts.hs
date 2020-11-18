@@ -1,26 +1,10 @@
+---- Extructura de dades de l'arbre Dts----
 data Argal a = Argal a [Argal a]
 
 data DtsNode = Node String String 
     deriving (Show)
 
 type Dts = Argal DtsNode
-
-offsetIndent:: Int -> String
-offsetIndent x 
-    | x > 0 = "\t" ++ (offsetIndent (x-1))
-    | otherwise = ""
-
-showIndent:: Dts -> Int -> String
-showIndent (Argal (Node attVal attName) []) indent =
-    (offsetIndent indent) ++ attVal ++ "\n" ++ 
-    offsetIndent (indent+1) ++ attName ++ "\n" 
-showIndent (Argal (Node attVal attName) children) indent =
-    (offsetIndent indent) ++ attVal ++ "\n" ++ 
-    offsetIndent (indent+1) ++ attName ++ "\n" ++ 
-    (concatMap (\x -> showIndent x (indent+2)) children)
-
-showDts:: Dts -> String
-showDts dts = showIndent dts 0
 
 ------------ FASE DE CONSTURCCIÓ DEL DTS ------------
 
@@ -57,8 +41,8 @@ type Taf = (Char,(Int, Int))
 -- [NomAtt1, NomAtt2, ... NomAtt_n] Per tant, la id del atribut x és (x-1)
 -- Aquesta id és mantè per a tota la lògica del programa. Per exemple, la matriu de Taf, la fila
 -- 0 fa referència a la llista de Taf de l'atribut 1, i així seqüencialment
-tradAttf:: [String]
-tradAttf = ["cap-shape", "cap-color", "gill-color"]
+tradAttF:: [String]
+tradAttF = ["cap-shape", "cap-color", "gill-color"]
 
 -- Per a la tradució de valors d'atribut al seu nom complet, s'utilitza una matriu [[(Char, String)]]
 -- on char es la id (que surt en els exemples, i String el nom complet)
@@ -223,11 +207,6 @@ updateUsedAtt att upAtt = upAtt ++ [att]
 
 ---- Construcció del Dts a partir del millor atribut i crida recursiva ----
 
---buildDtsFromAtt:: Int -> [Taf] -> Dts
---buildDtsFromAtt att tafList =
---    let childs = listFromTaf taf
---    Argal att []
-
 -- Donat una llista taf d'un atribut i la traducció unica dels valors, retorna la
 -- llista dels valors amb el seu nom complet
 listFromTaf:: [Taf] -> [(Char, String)] -> [String]
@@ -245,39 +224,53 @@ isLeaf (_,(_,_)) = 0
 nodeOrLeafAttVal:: [Taf] -> [Int]
 nodeOrLeafAttVal tafList = map isLeaf tafList
 
-buildDts:: [String] -> [String] -> Dts
-buildDts set tradAtt = 
+buildDts:: [String] -> Dts
+buildDts set = 
     let tradVal = tradAttVal
-        --tradAtt = tradAtt
         tcafreq = computeAllAttributes set []
         maxims = calculateAllAttValue tcafreq (length set)
         posmax = takeBestAtt maxims tcafreq
         newset = modifySet posmax tcafreq set
         updated = updateUsedAtt posmax []
-        attName = (tradAtt !! posmax)
+        attName = (tradAttF !! posmax)
         valNames = listFromTaf (tcafreq !! posmax) (tradVal !! posmax)
         valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
         list = zip valNames valNorL
-    in (Argal (Node "init" attName) (map (\x-> recursiveBuildDts x newset updated tradAtt) list))
+    in (Argal (Node "init" attName) (map (\x-> recursiveBuildDts x newset updated) list))
 
 
-recursiveBuildDts:: (String, Int) -> [String] -> [Int] -> [String] -> Dts
-recursiveBuildDts (valName, 1) _ _ _ = (Argal (Node valName "poisonous") [])
-recursiveBuildDts (valName, 2) _ _ _ = (Argal (Node valName "edible") [])
-recursiveBuildDts (valName, _) set updated tradAtt = 
+recursiveBuildDts:: (String, Int) -> [String] -> [Int] -> Dts
+recursiveBuildDts (valName, 1) _ _ = (Argal (Node valName "poisonous") [])
+recursiveBuildDts (valName, 2) _ _ = (Argal (Node valName "edible") [])
+recursiveBuildDts (valName, _) set updated = 
     let tradVal = tradAttVal
         tcafreq = computeAllAttributes set updated
         maxims = calculateAllAttValue tcafreq (length set)
         posmax = takeBestAtt maxims tcafreq
         newset = modifySet posmax tcafreq set
         newUpdated = updateUsedAtt posmax updated
-        attName = (tradAtt !! posmax)
+        attName = (tradAttF !! posmax)
         valNames = listFromTaf (tcafreq !! posmax) (tradVal !! posmax)
         valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
         list = zip valNames valNorL
-    in (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated tradAtt) list))
+    in (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated) list))
 
 
+---- Mostreig de l'arbre per pantalla ----
+offsetIndent:: Int -> String
+offsetIndent x 
+    | x > 0 = "  " ++ (offsetIndent (x-1))
+    | otherwise = ""
+
+showIndent:: Dts -> Int -> String
+showIndent (Argal (Node attVal attName) children) indent 
+    | attVal == "init" = attName ++ "\n" ++ (concatMap (\x -> showIndent x (indent+1)) children)
+    | otherwise = (offsetIndent indent) ++ attVal ++ "\n" ++ 
+                  offsetIndent (indent+1) ++ attName ++ "\n" ++ 
+                  (concatMap (\x -> showIndent x (indent+2)) children)
+
+showDts:: Dts -> String
+showDts dts = showIndent dts 0
 
 
 
@@ -291,7 +284,7 @@ main = do
     let set = processExamples examples
 
     -- Build decision tree
-    let dts = buildDts set ["cap-shape", "cap-color", "gill-color"]
+    let dts = buildDts set
 
     putStrLn $ (showDts dts)
 
