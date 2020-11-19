@@ -5,3 +5,11 @@ p,x,w,n
 e,x,y,n
 e,b,w,n
 p,x,w,p
+
+tradAttF:: [String]
+tradAttF = ["cap-shape", "cap-color", "gill-color"]
+
+tradAttVal:: [[(Char,String)]]
+tradAttVal = [[('b',"bell"),('x',"convex")],
+              [('n',"brown"),('y',"yellow"),('w',"white")],
+              [('k',"black"),('n',"brown"),('p',"pink")]]

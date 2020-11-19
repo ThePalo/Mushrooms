@@ -42,25 +42,44 @@ type Taf = (Char,(Int, Int))
 -- Aquesta id és mantè per a tota la lògica del programa. Per exemple, la matriu de Taf, la fila
 -- 0 fa referència a la llista de Taf de l'atribut 1, i així seqüencialment
 tradAttF:: [String]
-tradAttF = ["cap-shape", "cap-color", "gill-color"]
+tradAttF = ["cap-shape", "cap-surface", "cap-color", "bruises?", "odor", "gill-attachment", "gill-spacing",
+            "gill-size", "gill-color", "stalk-shape", "stalk-root", "stalk-surface-above-ring", "stalk-surface-below-ring",
+            "stalk-color-above-ring", "stalk-color-below-ring", "veil-type", "veil-color", "ring-number", "ring-type",
+            "spore-print-color", "population", "habitat"]
 
 -- Per a la tradució de valors d'atribut al seu nom complet, s'utilitza una matriu [[(Char, String)]]
 -- on char es la id (que surt en els exemples, i String el nom complet)
 tradAttVal:: [[(Char,String)]]
-tradAttVal = [[('b',"bell"),('x',"convex")],
-              [('n',"brown"),('y',"yellow"),('w',"white")],
-              [('k',"black"),('n',"brown"),('p',"pink")]]
+            ---bell=b,conical=c,convex=x,flat=f,
+tradAttVal=[[('b',"bell"),('c',"conical"),('x',"convex"),('f',"flat"),('k',"knobbed"),('s',"sunken")],
+            [('f',"fibrous"),('g',"grooves"),('y',"scaly"),('s',"smooth")],
+            [('n',"brown"),('b',"buff"),('c',"cinnamon"),('g',"gray"),('r',"green"),('p',"pink"),('u',"purple"),('e',"red"),('w',"white"),('y',"yellow")],
+            [('t',"bruises"),('f',"no")],
+            [('a',"almond"),('l',"anise"),('c',"creosote"),('y',"fishy"),('f',"foul"),('m',"musty"),('n',"none"),('p',"pungent"),('s',"spicy")],
+            [('a',"attached"),('d',"descending"),('f',"free"),('n',"notched")],
+            [('c',"close"),('w',"crowded"),('d',"distant")],
+            [('b',"broad"),('n',"narrow")],
+            [('k',"black"),('n',"brown"),('b',"buff"),('h',"chocolate"),('g',"gray"),('r',"green"),('o',"orange"),('p',"pink"),('u',"purple"),('e',"red"),('w',"white"),('y',"yellow")],
+            [('e',"enlarging"),('t',"tapering")],
+            [('b',"bulbous"),('c',"club"),('u',"cup"),('e',"equal"),('z',"rhizomorphs"),('r',"rooted"),('?',"missing")],
+            [('f',"fibrous"),('y',"scaly"),('k',"silky"),('s',"smooth")],
+            [('f',"fibrous"),('y',"scaly"),('k',"silky"),('s',"smooth")],
+            [('n',"brown"),('b',"buff"),('c',"cinnamon"),('g',"gray"),('o',"orange"),('p',"pink"),('e',"red"),('w',"white"),('y',"yellow")],
+            [('n',"brown"),('b',"buff"),('c',"cinnamon"),('g',"gray"),('o',"orange"),('p',"pink"),('e',"red"),('w',"white"),('y',"yellow")],
+            [('p',"partial"),('u',"universal")],
+            [('n',"brown"),('o',"orange"),('w',"white"),('y',"yellow")],
+            [('n',"none"),('o',"one"),('t',"two")],
+            [('c',"cobwebby"),('e',"evanescent"),('f',"flaring"),('l',"large"),('n',"none"),('p',"pendant"),('s',"sheathing"),('z',"zone")],
+            [('k',"black"),('n',"brown"),('b',"buff"),('h',"chocolate"),('r',"green"),('o',"orange"),('u',"purple"),('w',"white"),('y',"yellow")],
+            [('a',"abundant"),('c',"clustered"),('n',"numerous"),('s',"scattered"),('v',"several"),('y',"solitary")],
+            [('g',"grasses"),('l',"leaves"),('m',"meadows"),('p',"paths"),('u',"urban"),('w',"waste"),('d',"woods")]]
 
-takeIdAttVal:: [(Char,String)] -> Char -> Int
-takeIdAttVal [] _ = 0
-takeIdAttVal ((id,_):xs) att
-    | att == id = 0
-    | otherwise = 1 + takeIdAttVal xs att
 
+-- Donat un caràcter referent al valor d'un atribut, el tradueix al seu nom complet
 takeNameAttVal:: [(Char,String)] -> Char -> String
 takeNameAttVal [] _ = ""
-takeNameAttVal ((id,name):xs) att
-    | att == id = name
+takeNameAttVal ((idc,name):xs) att
+    | att == idc = name
     | otherwise = takeNameAttVal xs att
 
 
@@ -69,13 +88,14 @@ takeNameAttVal ((id,name):xs) att
 -- Donada una llista de Taf d'un atribut, un valor d'aquest atribut i la classe a la que pertany,
 -- es retorna la mateixa llista però havent modificat la freq en funció del nou valor-classe
 modifyFreq:: [Taf] -> Char -> Char -> [Taf]
-modifyFreq [] attVal 'p' = [(attVal, (1,0))]
 modifyFreq [] attVal 'e' = [(attVal, (0,1))]
+-- Si no es [] attVal 'e', sera si o si: [] attVal 'p'
+modifyFreq [] attVal _ = [(attVal, (1,0))]
 modifyFreq ((att,(pFreq, eFreq)):xs) attVal classVal =
     if attVal == att then
         if classVal == 'p' then ((att,((pFreq+1), eFreq)):xs)
         else ((att,(pFreq, (eFreq+1))):xs)
-    else ((att,(pFreq, eFreq)): (modifyFreq xs attVal classVal))
+    else ((att,(pFreq, eFreq)):(modifyFreq xs attVal classVal))
 
 
 -- Amb el set d'exemples i un int que representa un atribut, es computa una llista 
@@ -105,7 +125,7 @@ computeAllAttributes set updated = map (\x -> computeAttribute set x updated) [0
 -- Donada una llista Taf, calcula la suma dels valors relacionats amb les classes amb més moda
 calculateAttValueAux:: [Taf] -> [Int] -> Int 
 calculateAttValueAux [] mode = foldl (+) 0 mode
-calculateAttValueAux ((att,(pFreq, eFreq)):xs) mode
+calculateAttValueAux ((_,(pFreq, eFreq)):xs) mode
     | pFreq > eFreq = calculateAttValueAux xs (mode ++ [pFreq])
     | otherwise = calculateAttValueAux xs (mode ++ [eFreq])
 
@@ -136,8 +156,8 @@ takeFirstMaxPosAux (x:xs) pos maxPos maxVal
 -- Per a una llista taf d'un atribut concret, calcula quants valors tenen relacionats una sola classe
 computeAttMore0branch:: [Taf] -> Int
 computeAttMore0branch [] = 0
-computeAttMore0branch ((att,(0,_)):xs) = 1 + computeAttMore0branch xs
-computeAttMore0branch ((att,(_,0)):xs) = 1 + computeAttMore0branch xs
+computeAttMore0branch ((_,(0,_)):xs) = 1 + computeAttMore0branch xs
+computeAttMore0branch ((_,(_,0)):xs) = 1 + computeAttMore0branch xs
 computeAttMore0branch (_:xs) = computeAttMore0branch xs
 
 -- Agafa l'atribut que té més valors d'atribut a una sola classe
@@ -170,15 +190,15 @@ takeBestAtt values tafM =
 -- llista d'atributs ja utilitzats per a no tornar a utilitzar el mateix
 
 -- Retorna els diferents valors d'un atribut que estan relacionats unicament amb una classe
-ex2Delete:: [Taf] -> String
-ex2Delete [] = []
-ex2Delete ((att,(0,_)):xs) = (att : (ex2Delete xs))
-ex2Delete ((att,(_,0)):xs) = (att : (ex2Delete xs))
-ex2Delete (_:xs) = ex2Delete xs
+ex2DeleteF:: [Taf] -> String
+ex2DeleteF [] = []
+ex2DeleteF ((att,(0,_)):xs) = (att : (ex2DeleteF xs))
+ex2DeleteF ((att,(_,0)):xs) = (att : (ex2DeleteF xs))
+ex2DeleteF (_:xs) = ex2DeleteF xs
 
 -- Donat un exemple del set, mira si s'ha d'eliminar o no 
 deleteExFromEachEx:: Int -> String -> String -> String
-deleteExFromEachEx att [] ex = ex
+deleteExFromEachEx _ [] ex = ex
 deleteExFromEachEx att (x:xs) ex
     | (ex !! att) == x = []
     | otherwise = deleteExFromEachEx att xs ex
@@ -196,7 +216,7 @@ deleteExFromAllSet att ex2Delete (x:xs) =
 modifySet:: Int -> [[Taf]] -> [String] -> [String]
 modifySet att tafM set =
     let posAtt = att+1
-        delete = ex2Delete (tafM !! att)
+        delete = ex2DeleteF (tafM !! att)
     in
         deleteExFromAllSet posAtt delete set
 
@@ -273,19 +293,46 @@ showDts:: Dts -> String
 showDts dts = showIndent dts 0
 
 
+------------ FASE DE CLASSIFICACIÓ ------------
+
+correctAnwAndPos:: String -> [Dts] -> Int -> Int
+correctAnwAndPos _ [] _ = -1
+correctAnwAndPos answer ((Argal (Node valName _) _):xs) pos
+    | answer == valName = pos
+    | otherwise = correctAnwAndPos answer xs (pos+1)
+
+
+classificate:: Dts -> IO String
+classificate (Argal (Node _ attName) []) = do
+    if (attName == "edible" || attName == "poisonous") then putStrLn ("Prediction: " ++ attName)
+    else putStrLn ("Prediction: not enough attributes to make an accuracy prediction")
+    return (attName)
+classificate (Argal (Node valName attName) children) = do
+    putStrLn ("Which " ++ attName ++ "?")
+    answer <- getLine
+    let pos = correctAnwAndPos answer children 0
+    _ <- if (pos >= 0) then classificate (children !! pos)
+         else do classificate (Argal (Node valName attName) children)
+    return (answer)
+
+    
+
+
 
 
 main :: IO ()
 main = do
     
     -- Take dataset
-    contents <- readFile "agaricus-lepiota.example"
+    contents <- readFile "agaricus-lepiota.data"
     let examples = lines contents
     let set = processExamples examples
 
     -- Build decision tree
     let dts = buildDts set
-
     putStrLn $ (showDts dts)
 
+    -- Classify 
+    _ <- classificate dts
+    
     return ()
