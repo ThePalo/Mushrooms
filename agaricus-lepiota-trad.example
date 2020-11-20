@@ -1,0 +1,7 @@
+tradAttF:: [String]
+tradAttF = ["cap-shape", "cap-color", "gill-color"]
+
+tradAttVal:: [[(Char,String)]]
+tradAttVal = [[('b',"bell"),('x',"convex")],
+              [('n',"brown"),('y',"yellow"),('w',"white")],
+              [('k',"black"),('n',"brown"),('p',"pink")]]

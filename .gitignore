@@ -24,4 +24,4 @@ cabal.project.local~
 dts
 pr.*
 pr
-resultat.txt
+resultat*.txt

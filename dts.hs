@@ -164,7 +164,7 @@ computeAttMore0branch (_:xs) = computeAttMore0branch xs
 takeArrMore0Branch:: [Int] -> [[Taf]] -> Int
 takeArrMore0Branch maxList tafM =
     let attbranch = map (\x -> computeAttMore0branch (tafM !! x)) maxList
-    in takeFirstMaxPos attbranch 
+    in maxList !! (takeFirstMaxPos attbranch) 
 
 -- Agafa la posició dels valors màxims (més d'una si hi ha empat)
 takeAttMaxAux:: [Double] -> Int -> Double -> [Int] -> [Int]
@@ -273,8 +273,10 @@ recursiveBuildDts (valName, _) set updated =
         valNames = listFromTaf (tcafreq !! posmax) (tradVal !! posmax)
         valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
         list = zip valNames valNorL
-    in (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated) list))
-
+        moreAtt = ((length (set !! 0))-1) - (length updated)
+    in 
+        if (moreAtt > 0) then (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated) list))
+        else (Argal (Node valName "Error: No more attributes to make an accuracy prediction") [])
 
 ---- Mostreig de l'arbre per pantalla ----
 offsetIndent:: Int -> String
@@ -305,7 +307,7 @@ correctAnwAndPos answer ((Argal (Node valName _) _):xs) pos
 classificate:: Dts -> IO String
 classificate (Argal (Node _ attName) []) = do
     if (attName == "edible" || attName == "poisonous") then putStrLn ("Prediction: " ++ attName)
-    else putStrLn ("Prediction: not enough attributes to make an accuracy prediction")
+    else putStrLn (attName)
     return (attName)
 classificate (Argal (Node valName attName) children) = do
     putStrLn ("Which " ++ attName ++ "?")
