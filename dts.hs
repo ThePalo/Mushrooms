@@ -143,11 +143,11 @@ calculateAllAttValue tafM setSize = map (\x -> calculateAttValue x setSize) tafM
 -- més valors relacionats amb una única classe. (Si també hi ha empat en aquest segon criteri
 -- s'agafa el primer de tots ells)
 
--- Agafa la primera posició maxima d'una llista
-takeFirstMaxPos:: [Int] -> Int
-takeFirstMaxPos list = takeFirstMaxPosAux list 0 0 0
+-- Agafa la primera posició maxima d'una llista de reals
+takeFirstMaxPos:: [Double] -> Int
+takeFirstMaxPos list = takeFirstMaxPosAux list 0 0 0.0
 
-takeFirstMaxPosAux:: [Int] -> Int -> Int -> Int -> Int
+takeFirstMaxPosAux:: [Double] -> Int -> Int -> Double -> Int
 takeFirstMaxPosAux [] _ maxPos _ = maxPos
 takeFirstMaxPosAux (x:xs) pos maxPos maxVal
     | x >= maxVal = takeFirstMaxPosAux xs (pos+1) pos x
@@ -160,10 +160,10 @@ computeAttMore0branch ((_,(0,_)):xs) = 1 + computeAttMore0branch xs
 computeAttMore0branch ((_,(_,0)):xs) = 1 + computeAttMore0branch xs
 computeAttMore0branch (_:xs) = computeAttMore0branch xs
 
--- Agafa l'atribut que té més valors d'atribut a una sola classe
+-- Agafa l'atribut que té més proporció de valors d'atribut a una sola classe
 takeArrMore0Branch:: [Int] -> [[Taf]] -> Int
 takeArrMore0Branch maxList tafM =
-    let attbranch = map (\x -> computeAttMore0branch (tafM !! x)) maxList
+    let attbranch = map (\x -> (fromIntegral(computeAttMore0branch (tafM !! x)))/fromIntegral((length(tafM !! x)))) maxList
     in maxList !! (takeFirstMaxPos attbranch) 
 
 -- Agafa la posició dels valors màxims (més d'una si hi ha empat)
@@ -189,36 +189,19 @@ takeBestAtt values tafM =
 -- els quals un valor de l'atribut estava lligat exclusivament a una classe i s'actualitza la
 -- llista d'atributs ja utilitzats per a no tornar a utilitzar el mateix
 
--- Retorna els diferents valors d'un atribut que estan relacionats unicament amb una classe
-ex2DeleteF:: [Taf] -> String
-ex2DeleteF [] = []
-ex2DeleteF ((att,(0,_)):xs) = (att : (ex2DeleteF xs))
-ex2DeleteF ((att,(_,0)):xs) = (att : (ex2DeleteF xs))
-ex2DeleteF (_:xs) = ex2DeleteF xs
-
--- Donat un exemple del set, mira si s'ha d'eliminar o no 
-deleteExFromEachEx:: Int -> String -> String -> String
-deleteExFromEachEx _ [] ex = ex
-deleteExFromEachEx att (x:xs) ex
-    | (ex !! att) == x = []
-    | otherwise = deleteExFromEachEx att xs ex
-
 -- Donat tot el set, retorna el mateix set però amb els exemples eliminats (si n'hi ha)
-deleteExFromAllSet:: Int -> String -> [String] -> [String]
+deleteExFromAllSet:: Int -> Char -> [String] -> [String]
 deleteExFromAllSet _ _ [] = []
-deleteExFromAllSet att ex2Delete (x:xs) = 
-    let newex = deleteExFromEachEx att ex2Delete x 
-    in
-        if null newex then (deleteExFromAllSet att ex2Delete xs)
-        else [deleteExFromEachEx att ex2Delete x] ++ (deleteExFromAllSet att ex2Delete xs)
+deleteExFromAllSet posAttAnt valAnt (x:xs)
+    | (x !! posAttAnt) /= valAnt = deleteExFromAllSet posAttAnt valAnt xs
+    | otherwise = (x:(deleteExFromAllSet posAttAnt valAnt xs))
 
 -- Modifica el set per a eliminar exemples que ja no interessin
-modifySet:: Int -> [[Taf]] -> [String] -> [String]
-modifySet att tafM set =
-    let posAtt = att+1
-        delete = ex2DeleteF (tafM !! att)
+modifySet:: Int -> Char -> [String] -> [String]
+modifySet attAnt valAnt set =
+    let posAttAnt = attAnt + 1
     in
-        deleteExFromAllSet posAtt delete set
+        deleteExFromAllSet posAttAnt valAnt set
 
 -- Actualitza la llista d'atributs utilitzats per a no repetir-los
 updateUsedAtt:: Int -> [Int] -> [Int]
@@ -227,11 +210,11 @@ updateUsedAtt att upAtt = upAtt ++ [att]
 
 ---- Construcció del Dts a partir del millor atribut i crida recursiva ----
 
--- Donat una llista taf d'un atribut i la traducció unica dels valors, retorna la
--- llista dels valors amb el seu nom complet
-listFromTaf:: [Taf] -> [(Char, String)] -> [String]
-listFromTaf [] _ = []
-listFromTaf ((att,_):xs) trad = ((takeNameAttVal trad att):(listFromTaf xs trad))
+-- Donat una llista taf d'un atribut, retorna la
+-- llista dels valors de l'atribut
+listFromTaf:: [Taf] -> String
+listFromTaf [] = []
+listFromTaf ((att,_):xs) = (att:(listFromTaf xs))
 
 -- Donat un Taf, mira si es fulla (1 si p, 2 si e) o no (0 si node)
 isLeaf:: Taf -> Int
@@ -246,34 +229,37 @@ nodeOrLeafAttVal tafList = map isLeaf tafList
 
 buildDts:: [String] -> Dts
 buildDts set = 
-    let tradVal = tradAttVal
+    let
         tcafreq = computeAllAttributes set []
         maxims = calculateAllAttValue tcafreq (length set)
         posmax = takeBestAtt maxims tcafreq
-        newset = modifySet posmax tcafreq set
         updated = updateUsedAtt posmax []
         attName = (tradAttF !! posmax)
-        valNames = listFromTaf (tcafreq !! posmax) (tradVal !! posmax)
+        valNames = listFromTaf (tcafreq !! posmax)
         valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
         list = zip valNames valNorL
-    in (Argal (Node "init" attName) (map (\x-> recursiveBuildDts x newset updated) list))
+    in (Argal (Node "init" attName) (map (\x-> recursiveBuildDts x set updated) list))
 
 
-recursiveBuildDts:: (String, Int) -> [String] -> [Int] -> Dts
-recursiveBuildDts (valName, 1) _ _ = (Argal (Node valName "poisonous") [])
-recursiveBuildDts (valName, 2) _ _ = (Argal (Node valName "edible") [])
-recursiveBuildDts (valName, _) set updated = 
-    let tradVal = tradAttVal
-        tcafreq = computeAllAttributes set updated
-        maxims = calculateAllAttValue tcafreq (length set)
+recursiveBuildDts:: (Char, Int) -> [String] -> [Int] -> Dts
+recursiveBuildDts (valAtt, 1) _ updated = (Argal (Node (takeNameAttVal (tradAttVal !! attAnt) valAtt) "poisonous") [])
+    where attAnt = updated !! ((length updated)-1)
+recursiveBuildDts (valAtt, 2) _ updated = (Argal (Node (takeNameAttVal (tradAttVal !! attAnt) valAtt) "edible") [])
+    where attAnt = updated !! ((length updated)-1)
+recursiveBuildDts (valAtt, _) set updated = 
+    let
+        attAnt = updated !! ((length updated)-1)
+        newset = modifySet attAnt valAtt set
+        tcafreq = computeAllAttributes newset updated
+        maxims = calculateAllAttValue tcafreq (length newset)
         posmax = takeBestAtt maxims tcafreq
-        newset = modifySet posmax tcafreq set
         newUpdated = updateUsedAtt posmax updated
         attName = (tradAttF !! posmax)
-        valNames = listFromTaf (tcafreq !! posmax) (tradVal !! posmax)
+        valName = (takeNameAttVal (tradAttVal !! attAnt) valAtt) 
+        valNames = listFromTaf (tcafreq !! posmax) 
         valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
         list = zip valNames valNorL
-        moreAtt = ((length (set !! 0))-1) - (length updated)
+        moreAtt = ((length (newset !! 0))-1) - (length updated)
     in 
         if (moreAtt > 0) then (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated) list))
         else (Argal (Node valName "Error: No more attributes to make an accuracy prediction") [])
