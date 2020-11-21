@@ -32,3 +32,19 @@ Una vegada s'ha creat l'arbre, es printa per pantalla de tal manera que sigui f�
 Aquesta part utilitza una funció amb un sol paràmetre (el Dts) i que té com a sortida la mònada IO, per a l'entrada i sortida dels valors. La funció és simple: va recorrent l'arbre, deixant que l'usuari esculli el valor de l'atribut i calculant el millor atribut en funció d'aquestes eleccions, fins que s'arriba a una predicció o a un error (per no poder fer una predicció amb el 100% d'accuracy per falta d'atributs).
 
 _En el codi es poden veure comentades totes les funcions i estructures que implementen aquesta solució per al problema._
+
+### Precondicions del programa
+Per al correcte funcionament del codi, els exemples del dataset sempre han de seguir aquest format:
+
+```Class | Att1 | Att2 | ... | Att_n```
+
+Això és degut a que la id del atribut contingut a la posició x del dataset és (x-1). Aquesta id és manté per a tota la lògica del programa.
+Per exemple, el nom dels atributs es guarda tenint en compte aquest ordre: en una llista de Strings on la posició indica la id de l'atribut al qual pertany el nom contingut en la posició:
+```[NomAtt1, NomAtt2, ... NomAtt_n]```
+
+La traducció de valors d'atributs d'un caràcter al seu nom complet també té aquest requeriment, ja que l'estructura és una llista de llistes on la primera llista (posició 0) fa referència a la traducció dels valors de l'atribut 1, la segona llista (posició 1) a la traducció de valors de l'atribut 2 i així seqüencialment.
+
+Si es volen afegir nous atributs o modificar la posició dels ja existents, s'ha de tenir en compte aquest ordre i modificar tot el dataset original, la llista dels noms d'atributs i la llista de llistes de les traduccions dels valors dels atributs en consonància amb l'ordre comentat.
+
+- Important: els valors d'atributs que no es coneixen (indicats al dataset amb el caràcter '?' i que són exclusius de l'atribut _stalk-root_) s'han tractat com un valor més de l'atribut.
+   
