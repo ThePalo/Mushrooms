@@ -1,4 +1,4 @@
----- Extructura de dades de l'arbre Dts----
+---- Estructura de dades de l'arbre Dts----
 data Argal a = Argal a [Argal a]
 
 data DtsNode = Node String String 
@@ -6,7 +6,7 @@ data DtsNode = Node String String
 
 type Dts = Argal DtsNode
 
------------- FASE DE CONSTURCCIÓ DEL DTS ------------
+------------ FASE DE CONSTRUCCIÓ DEL DTS ------------
 
 ---- Processat dels exemples a un set manipulable ----
 
@@ -38,7 +38,7 @@ type Taf = (Char,(Int, Int))
 -- Class | Att1 | Att2 | ... | Att_n
 -- Per tant, el nom dels atributs es guarda tenint en compte aquest ordre, en una llista
 -- de Strings on la posició indica a quin atribut pertany el nom contingut en la posició.
--- [NomAtt1, NomAtt2, ... NomAtt_n] Per tant, la id del atribut x és (x-1)
+-- [NomAtt1, NomAtt2, ... NomAtt_n] Per tant, la id del atribut contingut a la posició x del dataset és (x-1)
 -- Aquesta id és mantè per a tota la lògica del programa. Per exemple, la matriu de Taf, la fila
 -- 0 fa referència a la llista de Taf de l'atribut 1, i així seqüencialment
 tradAttF:: [String]
@@ -48,9 +48,8 @@ tradAttF = ["cap-shape", "cap-surface", "cap-color", "bruises?", "odor", "gill-a
             "spore-print-color", "population", "habitat"]
 
 -- Per a la tradució de valors d'atribut al seu nom complet, s'utilitza una matriu [[(Char, String)]]
--- on char es la id (que surt en els exemples, i String el nom complet)
+-- on char es la id (que surt en els exemples del dataset, i String el nom complet)
 tradAttVal:: [[(Char,String)]]
-            ---bell=b,conical=c,convex=x,flat=f,
 tradAttVal=[[('b',"bell"),('c',"conical"),('x',"convex"),('f',"flat"),('k',"knobbed"),('s',"sunken")],
             [('f',"fibrous"),('g',"grooves"),('y',"scaly"),('s',"smooth")],
             [('n',"brown"),('b',"buff"),('c',"cinnamon"),('g',"gray"),('r',"green"),('p',"pink"),('u',"purple"),('e',"red"),('w',"white"),('y',"yellow")],
@@ -75,7 +74,7 @@ tradAttVal=[[('b',"bell"),('c',"conical"),('x',"convex"),('f',"flat"),('k',"knob
             [('g',"grasses"),('l',"leaves"),('m',"meadows"),('p',"paths"),('u',"urban"),('w',"waste"),('d',"woods")]]
 
 
--- Donat un caràcter referent al valor d'un atribut, el tradueix al seu nom complet
+-- Donada la llista de traducció dels valors d'un atribut i un caràcter referent al valor d'un atribut, el tradueix al seu nom complet
 takeNameAttVal:: [(Char,String)] -> Char -> String
 takeNameAttVal [] _ = ""
 takeNameAttVal ((idc,name):xs) att
@@ -140,8 +139,8 @@ calculateAllAttValue tafM setSize = map (\x -> calculateAttValue x setSize) tafM
 
 ---- Procés d'agafar el millor atribut en funció del valor càlculat ----
 -- IMPORTANT: En cas d'empat (més d'un atribut amb valor màxim), s'agafa l'atribut amb
--- més valors relacionats amb una única classe. (Si també hi ha empat en aquest segon criteri
--- s'agafa el primer de tots ells)
+-- més proporció de valors relacionats amb una única classe. (Si també hi ha empat en 
+-- aquest segon criteri s'agafa el primer de tots ells)
 
 -- Agafa la primera posició maxima d'una llista de reals
 takeFirstMaxPos:: [Double] -> Int
@@ -150,7 +149,7 @@ takeFirstMaxPos list = takeFirstMaxPosAux list 0 0 0.0
 takeFirstMaxPosAux:: [Double] -> Int -> Int -> Double -> Int
 takeFirstMaxPosAux [] _ maxPos _ = maxPos
 takeFirstMaxPosAux (x:xs) pos maxPos maxVal
-    | x >= maxVal = takeFirstMaxPosAux xs (pos+1) pos x
+    | x > maxVal = takeFirstMaxPosAux xs (pos+1) pos x
     | otherwise = takeFirstMaxPosAux xs (pos+1) maxPos maxVal
 
 -- Per a una llista taf d'un atribut concret, calcula quants valors tenen relacionats una sola classe
@@ -185,9 +184,8 @@ takeBestAtt values tafM =
 
 ---- Modificació del set i la llista d'atributs utilitzats a partir de l'atribut sel·leccionat----
 
--- Una vegada s'ha computat el millor atribut es modifica el set per a eliminar els exemples
--- els quals un valor de l'atribut estava lligat exclusivament a una classe i s'actualitza la
--- llista d'atributs ja utilitzats per a no tornar a utilitzar el mateix
+-- Per a cada crida recursiva es modifica el set per a eliminar els exemples que no formin part de
+-- la branca recursiva en qüestió
 
 -- Donat tot el set, retorna el mateix set però amb els exemples eliminats (si n'hi ha)
 deleteExFromAllSet:: Int -> Char -> [String] -> [String]
@@ -227,6 +225,8 @@ isLeaf (_,(_,_)) = 0
 nodeOrLeafAttVal:: [Taf] -> [Int]
 nodeOrLeafAttVal tafList = map isLeaf tafList
 
+-- Crida de construcció de l'arbre a partir del dataset. Computa el primer node (cas lleugerament especial ja que no té cap
+-- decisió precedera) i inicia la crida recursiva.
 buildDts:: [String] -> Dts
 buildDts set = 
     let
@@ -240,36 +240,60 @@ buildDts set =
         list = zip valNames valNorL
     in (Argal (Node "init" attName) (map (\x-> recursiveBuildDts x set updated) list))
 
-
+-- Crida recursiva per a la creació del Dts.
+-- Els paràmetres són:
+-- (Char, Int) --> valor (de l'atribut anterior) escollit per a aquesta branca i int que indica si es fulla (i quina classe té) o no
+-- [String] --> dataset modificat a partir de totes les crides recursives precederes pròpies per a la branca en qüestió
+-- [Int] --> llista d'atributs ja utilitzats en crides recursives anteriors pròpies d'aquesta branca
+-- Retorna un Dts
 recursiveBuildDts:: (Char, Int) -> [String] -> [Int] -> Dts
+-- Si és fulla, creem node fulla segons la classe i parem la crida recursiva
 recursiveBuildDts (valAtt, 1) _ updated = (Argal (Node (takeNameAttVal (tradAttVal !! attAnt) valAtt) "poisonous") [])
     where attAnt = updated !! ((length updated)-1)
 recursiveBuildDts (valAtt, 2) _ updated = (Argal (Node (takeNameAttVal (tradAttVal !! attAnt) valAtt) "edible") [])
     where attAnt = updated !! ((length updated)-1)
+-- Si no és fulla:
 recursiveBuildDts (valAtt, _) set updated = 
     let
+        -- Agafem el id de l'atribut anterior
         attAnt = updated !! ((length updated)-1)
+        -- Computem el nou set a partir de l'atribut anterior i el valor d'aquest per a aquesta cirda recursiva
         newset = modifySet attAnt valAtt set
+        -- Calculem la llista Taf per a cada atribut
         tcafreq = computeAllAttributes newset updated
+        -- Computem el valor de cada atribut
         maxims = calculateAllAttValue tcafreq (length newset)
+        -- Agafem el millor atribut
         posmax = takeBestAtt maxims tcafreq
+        -- Afegim aquest atribut a la llista d'atributs utilitzats per a no repetir-los durant la recurció
         newUpdated = updateUsedAtt posmax updated
+        -- Agafem el nom complet de l'atribut a partir del seu id
         attName = (tradAttF !! posmax)
-        valName = (takeNameAttVal (tradAttVal !! attAnt) valAtt) 
-        valNames = listFromTaf (tcafreq !! posmax) 
+        -- Agafem el nom complet del valor sel·leccionat de l'atribut anterior
+        valName = (takeNameAttVal (tradAttVal !! attAnt) valAtt)
+        -- Fem una llista de tots els valors del nou atribut utilitzats al dataset (no l'original, sinó el nou)
+        valNames = listFromTaf (tcafreq !! posmax)
+        -- Mirem, per a cada valor del nou atribut, si la seva elecció crearà un node o una fulla
         valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
+        -- Combinem el valor de cada atribut amb si serà node o fulla
         list = zip valNames valNorL
+        -- Mirem si queden atributs per utilitzar
         moreAtt = ((length (newset !! 0))-1) - (length updated)
     in 
+        -- Si queden atributs per utilitzar, fem la crida recursiva que genera un Dts per a cada posible valor de l'atribut sel·leccionat
         if (moreAtt > 0) then (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated) list))
+        -- Si no queden atributs per utilitzar, parem la crida recursiva (ja que no s'haura pogut computar un nou atribut) i creem un node que
+        -- indiqui que aquest cami no és possible
         else (Argal (Node valName "Error: No more attributes to make an accuracy prediction") [])
 
 ---- Mostreig de l'arbre per pantalla ----
+-- Crea un offset (espais en blanc) per pantalla
 offsetIndent:: Int -> String
 offsetIndent x 
     | x > 0 = "  " ++ (offsetIndent (x-1))
     | otherwise = ""
 
+-- Mostra el Dts utilitzant preordre
 showIndent:: Dts -> Int -> String
 showIndent (Argal (Node attVal attName) children) indent 
     | attVal == "init" = attName ++ "\n" ++ (concatMap (\x -> showIndent x (indent+1)) children)
@@ -282,7 +306,7 @@ showDts dts = showIndent dts 0
 
 
 ------------ FASE DE CLASSIFICACIÓ ------------
-
+-- Retorna la posició de la resposta a la llista de fills, si la resposta és incorrecte retorna -1
 correctAnwAndPos:: String -> [Dts] -> Int -> Int
 correctAnwAndPos _ [] _ = -1
 correctAnwAndPos answer ((Argal (Node valName _) _):xs) pos
@@ -290,37 +314,41 @@ correctAnwAndPos answer ((Argal (Node valName _) _):xs) pos
     | otherwise = correctAnwAndPos answer xs (pos+1)
 
 
+-- Donat l'arbre de decisió, classifica segons els valors que introdueixi l'usuari
 classificate:: Dts -> IO String
+-- Si el node és fulla, printem la predicció (o l'error en cas que hi hagi)
 classificate (Argal (Node _ attName) []) = do
     if (attName == "edible" || attName == "poisonous") then putStrLn ("Prediction: " ++ attName)
     else putStrLn (attName)
     return (attName)
+-- Si és node:
 classificate (Argal (Node valName attName) children) = do
+    -- Preguntem quin valor de l'atribut es vol
     putStrLn ("Which " ++ attName ++ "?")
     answer <- getLine
     let pos = correctAnwAndPos answer children 0
+    -- Si el valor és correcte, pasem al següent node corresponent a aquesta elecció
     _ <- if (pos >= 0) then classificate (children !! pos)
+    -- Si el valor no és correcte, tornem a preguntar
          else do classificate (Argal (Node valName attName) children)
     return (answer)
-
-    
-
 
 
 
 main :: IO ()
 main = do
     
-    -- Take dataset
+    -- Agafa i processa el dataset
     contents <- readFile "agaricus-lepiota.data"
     let examples = lines contents
     let set = processExamples examples
 
-    -- Build decision tree
+    -- Crea el Dts a partir del dataset processat
     let dts = buildDts set
+    -- Printa el Dts
     putStrLn $ (showDts dts)
 
-    -- Classify 
+    -- A partir de l'arbre, clasifica segons les respostes de l'usuari 
     _ <- classificate dts
     
     return ()
