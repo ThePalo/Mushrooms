@@ -9,7 +9,7 @@ ghc dts.hs
 ./dts
 ```
 
-## Enfoc del problema
+## Implementació de la solució
 L'arbre de decisió (Dts) s'ha desenvolupat amb l'objectiu que sigui completament independent de la resta del programa un cop creat. Això vol dir que només amb l'estructura de l'arbre és suficient per a fer la classificació, no fa falta cap estructura auxiliar. Amb aquest objectiu en ment, l'arbre és un arbre general on cada node està format per dos Strings:
 1. Valor de l'atribut anterior
 2. Pot prendre dos valors (segons si és node o fulla -node sense fills-)
@@ -31,4 +31,4 @@ Una vegada s'ha creat l'arbre, es printa per pantalla de tal manera que sigui f�
 
 Aquesta part utilitza una funció amb un sol paràmetre (el Dts) i que té com a sortida la mònada IO, per a l'entrada i sortida dels valors. La funció és simple: va recorrent l'arbre, deixant que l'usuari esculli el valor de l'atribut i calculant el millor atribut en funció d'aquestes eleccions, fins que s'arriba a una predicció o a un error (per no poder fer una predicció amb el 100% d'accuracy per falta d'atributs).
 
-_En el codi es poden veure comentades totes les funcions i estructures que implementen aquest enfoc del problema._
+_En el codi es poden veure comentades totes les funcions i estructures que implementen aquesta solució per al problema._
