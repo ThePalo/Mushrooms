@@ -2,6 +2,10 @@
 
 Pràctica de Haskell de l'assignatura de Llenguatges de Programació, de la facultat FIB (UPC).
 L'enunciat es troba a: https://gebakx.github.io/hs-dts/.
+Els arxius del repositori són:
+* ```dts.hs```: codi en haskell del programa
+* ```agaricus-lepiota.data```: dataset (dels bolets)
+* ```README.md```: explicacions de la implementació de la solució i precondicions del codi
 
 Per a executar la pràctica, només cal compilar i executar l'arxiu ```dts.hs```:
 ```
