@@ -13,18 +13,19 @@ ghc dts.hs
 L'arbre de decisió (Dts) s'ha desenvolupat amb l'objectiu que sigui completament independent de la resta del programa un cop creat. Això vol dir que només amb l'estructura de l'arbre és suficient per a fer la classificació, no fa falta cap estructura auxiliar. Amb aquest objectiu en ment, l'arbre és un arbre general on cada node està format per dos Strings:
 1. Valor de l'atribut anterior
 2. Pot prendre dos valors (segons si és node o fulla -node sense fills-)
-  a. Si és node, millor atribut computat a partir d'haver escollit el valor guardat a la primera String 
-  b. Si és fulla, predicció de la classe (o error en cas que no es pugui fer la predicció).
+  - Si és node, millor atribut computat a partir d'haver escollit el valor guardat a la primera String 
+  - Si és fulla, predicció de la classe (o error en cas que no es pugui fer la predicció).
 
 Per a realitzar aquest arbre es segueix un procés recursiu que acaba quan la predicció té una accuracy del 100% o quan no queden més atributs (en aquest cas és llença un missatge d'error).
 En cada crida recursiva es segueixen aquests passos:
-0. Si la crida detecta que el nou node és fulla, es genera la fulla amb la predicció en qüestió (o un missatge d'error si no es pot fer aquesta predicció per falta d'atributs) i no fa més crides recursives. Si no és fulla, segueix els següents passos:
-1. A partir de l'atribut i el seu valor per a la branca en qüestió, es calcula el nou dataset (un subconjunt del dataset anterior, però amb els exemples els quals tenen com a valor de l'atribut l'escollit per a aquesta branca). A partir d'ara tots els càlculs que ho requereixin seràn amb aquest nou dataset.
-2. Per a cada atribut no utilitzat anteriorment, es calcula la freqüència de la relació de cada valor amb cada classe i es guarda en una estructura.
-3. Amb el càlcul anterior, es computa el valor de cada atribut i s'agafa el que té valor màxim
+
+1. Si la crida detecta que el nou node és fulla, es genera la fulla amb la predicció en qüestió (o un missatge d'error si no es pot fer aquesta predicció per falta d'atributs) i no fa més crides recursives. Si no és fulla, segueix els següents passos:
+2. A partir de l'atribut i el seu valor per a la branca en qüestió, es calcula el nou dataset (un subconjunt del dataset anterior, però amb els exemples els quals tenen com a valor de l'atribut l'escollit per a aquesta branca). A partir d'ara tots els càlculs que ho requereixin seràn amb aquest nou dataset.
+3. Per a cada atribut no utilitzat anteriorment, es calcula la freqüència de la relació de cada valor amb cada classe i es guarda en una estructura.
+4. Amb el càlcul anterior, es computa el valor de cada atribut i s'agafa el que té valor màxim
     - Important: En cas d'empat (més d'un atribut amb valor màxim) es desempata agafant l'atribut que té més percentatge de valors relacionats amb una sola classe (per tant, que té més valors que seran una fulla). Si també ens trobem un empat amb aquesta heurística, s'agafa el primer valor màxim en computar aquesta heurística.
-4. Ara que ja s'ha escollit el millor atribut, es posa a la llista d'atributs utilitzats per a no repetir-lo en crides recursives.
-5. Per a cada valor de l'atribut que s'hagi utilitzat al dataset es fa una crida recursiva que serà un fill d'aquest node.
+5. Ara que ja s'ha escollit el millor atribut, es posa a la llista d'atributs utilitzats per a no repetir-lo en crides recursives.
+6. Per a cada valor de l'atribut que s'hagi utilitzat al dataset es fa una crida recursiva que serà un fill d'aquest node.
 
 
 Una vegada s'ha creat l'arbre, es printa per pantalla de tal manera que sigui fàcilment llegible i es comença el procés de classificació.
