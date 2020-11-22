@@ -27,7 +27,7 @@ En cada crida recursiva es segueixen aquests passos:
 2. A partir de l'atribut i el seu valor per a la branca en qüestió, es calcula el nou dataset (un subconjunt del dataset anterior, però amb els exemples els quals tenen com a valor de l'atribut l'escollit per a aquesta branca). A partir d'ara tots els càlculs que ho requereixin seràn amb aquest nou dataset.
 3. Per a cada atribut no utilitzat anteriorment, es calcula la freqüència de la relació de cada valor amb cada classe i es guarda en una estructura.
 4. Amb el càlcul anterior, es computa el valor de cada atribut i s'agafa el que té valor màxim
-    - Important: En cas d'empat (més d'un atribut amb valor màxim) es desempata agafant l'atribut que té més percentatge de valors relacionats amb una sola classe (per tant, que té més valors que seran una fulla). Si també hi ha un empat amb aquesta heurística, s'agafa el primer valor màxim en computar aquesta heurística.
+   - Important: En cas d'empat (més d'un atribut amb valor màxim) es desempata agafant l'atribut que té el percentatge més alt entre els seus valors relacionats amb una sola classe i el total de valors de l'atribut utilitzats al dataset (per tant, s'agafa l'atribut que té més valors que crearan fulles respecte al total de valors de l'atribut utilitzats al dataset). Si també hi ha un empat, s'agafa el primer valor màxim en computar aquesta heurística.
 5. Ara que ja s'ha escollit el millor atribut, es posa a la llista d'atributs utilitzats per a no repetir-lo en crides recursives.
 6. Per a cada valor de l'atribut es fa una crida recursiva que serà un fill d'aquest node.
 
