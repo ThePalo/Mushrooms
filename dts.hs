@@ -214,16 +214,28 @@ listFromTaf:: [Taf] -> String
 listFromTaf [] = []
 listFromTaf ((att,_):xs) = (att:(listFromTaf xs))
 
--- Donat un Taf, mira si es fulla (1 si p, 2 si e) o no (0 si node)
-isLeaf:: Taf -> Int
-isLeaf (_,(_,0)) = 1
-isLeaf (_,(0,_)) = 2
-isLeaf (_,(_,_)) = 0
+-- Retorna tots els noms dels valors d'un atribut:
+valuesOfAtt:: [(Char,String)] -> String
+valuesOfAtt [] = []
+valuesOfAtt ((c,_):xs) = (c:(valuesOfAtt xs))
+
+-- Donat un valor d'atribut, extrau la següent info segons la llista taf de l'atribut
+-- (Char, --> valor de l'atribut
+-- Int) --> -1 si no es troba a la llista taf (atribut no s'usa al dataset de la branca)
+--      --> 1 o 2 si amb aquest atribut es determina edible o poisonous respectivament
+--      --> 0 si aquesta elecció genera un nou node a la branca del Dts    
+extractValueInfo:: Char -> [Taf] -> (Char, Int)
+extractValueInfo val [] = (val,-1)
+extractValueInfo val ((att,(pFreq, eFreq)):xs)
+    | val == att && eFreq == 0 = (val,1)
+    | val == att && pFreq == 0 = (val,2)
+    | val == att = (val,0)
+    | otherwise = extractValueInfo val xs
 
 -- A partir de la llista taf, extreiem els valors de l'atribut que crein fulles
 -- i els que crein nodes
-nodeOrLeafAttVal:: [Taf] -> [Int]
-nodeOrLeafAttVal tafList = map isLeaf tafList
+infoAttVal:: [Taf] -> String -> [(Char, Int)]
+infoAttVal tafList valuesAtt = map (\x -> extractValueInfo x tafList) valuesAtt
 
 -- Crida de construcció de l'arbre a partir del dataset. Computa el primer node (cas lleugerament especial ja que no té cap
 -- decisió precedera) i inicia la crida recursiva.
@@ -235,10 +247,9 @@ buildDts set =
         posmax = takeBestAtt maxims tcafreq
         updated = updateUsedAtt posmax []
         attName = (tradAttF !! posmax)
-        valNames = listFromTaf (tcafreq !! posmax)
-        valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
-        list = zip valNames valNorL
-    in (Argal (Node "init" attName) (map (\x-> recursiveBuildDts x set updated) list))
+        valNames = valuesOfAtt (tradAttVal !! posmax)
+        infoValList = infoAttVal (tcafreq !! posmax) valNames
+    in (Argal (Node "init" attName) (map (\x-> recursiveBuildDts x set updated) infoValList))
 
 -- Crida recursiva per a la creació del Dts.
 -- Els paràmetres són:
@@ -248,6 +259,8 @@ buildDts set =
 -- Retorna un Dts
 recursiveBuildDts:: (Char, Int) -> [String] -> [Int] -> Dts
 -- Si és fulla, creem node fulla segons la classe i parem la crida recursiva
+recursiveBuildDts (valAtt, -1) _ updated = (Argal (Node (takeNameAttVal (tradAttVal !! attAnt) valAtt) "No information for this value") [])
+    where attAnt = updated !! ((length updated)-1)
 recursiveBuildDts (valAtt, 1) _ updated = (Argal (Node (takeNameAttVal (tradAttVal !! attAnt) valAtt) "poisonous") [])
     where attAnt = updated !! ((length updated)-1)
 recursiveBuildDts (valAtt, 2) _ updated = (Argal (Node (takeNameAttVal (tradAttVal !! attAnt) valAtt) "edible") [])
@@ -271,17 +284,15 @@ recursiveBuildDts (valAtt, _) set updated =
         attName = (tradAttF !! posmax)
         -- Agafem el nom complet del valor sel·leccionat de l'atribut anterior
         valName = (takeNameAttVal (tradAttVal !! attAnt) valAtt)
-        -- Fem una llista de tots els valors del nou atribut utilitzats al dataset (no l'original, sinó el nou)
-        valNames = listFromTaf (tcafreq !! posmax)
-        -- Mirem, per a cada valor del nou atribut, si la seva elecció crearà un node o una fulla
-        valNorL = nodeOrLeafAttVal (tcafreq !! posmax)
-        -- Combinem el valor de cada atribut amb si serà node o fulla
-        list = zip valNames valNorL
+        -- Fem una llista de tots els valors del nou atribut
+        valNames = valuesOfAtt (tradAttVal !! posmax)
+        -- Mirem, per a cada valor del nou atribut, que crearà la seva branca d'elecció
+        infoValList = infoAttVal (tcafreq !! posmax) valNames
         -- Mirem si queden atributs per utilitzar
         moreAtt = ((length (newset !! 0))-1) - (length updated)
     in 
         -- Si queden atributs per utilitzar, fem la crida recursiva que genera un Dts per a cada posible valor de l'atribut sel·leccionat
-        if (moreAtt > 0) then (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated) list))
+        if (moreAtt > 0) then (Argal (Node valName attName) (map (\x-> recursiveBuildDts x newset newUpdated) infoValList))
         -- Si no queden atributs per utilitzar, parem la crida recursiva (ja que no s'haura pogut computar un nou atribut) i creem un node que
         -- indiqui que aquest cami no és possible
         else (Argal (Node valName "Error: No more attributes to make an accuracy prediction") [])
